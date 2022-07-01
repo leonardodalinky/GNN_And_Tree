@@ -1,0 +1,48 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+# exclude: "^(aligner/)$"
+repos:
+  - repo: local
+    hooks:
+      - id: trailing-whitespace
+        name: trailing-whitespace-fixer
+        entry: trailing-whitespace-fixer
+        language: system
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        entry: end-of-file-fixer
+        language: system
+      - id: check-added-large-files
+        name: check-added-large-files
+        entry: check-added-large-files
+        language: system
+      - id: destroyed-symlinks
+        name: destroyed-symlinks
+        entry: destroyed-symlinks
+        language: system
+      - id: check-yaml
+        name: check-yaml
+        entry: check-yaml
+        language: system
+        types_or: [yaml]
+        args: ["--allow-multiple-documents"]
+      - id: detect-private-key
+        name: detect-private-key
+        entry: detect-private-key
+        language: system
+  - repo: local
+    hooks:
+      - id: black-jupyter
+        name: black-jupyter
+        entry: black
+        language: system
+        args: ["-l", "120", "-t", "py37"]
+        types_or: [python, pyi, jupyter]
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort
+        entry: isort
+        language: system
+        types_or: [cython, pyi, python]
+        args: ["-n", "--ls", "--tc", "--py", "37", "--balanced", "-l", "120"]
