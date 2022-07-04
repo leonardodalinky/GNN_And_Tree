@@ -131,3 +131,6 @@ dmypy.json
 # ide
 .vscode/
 .idea/
+
+# temp files/dirs
+tmp_*
