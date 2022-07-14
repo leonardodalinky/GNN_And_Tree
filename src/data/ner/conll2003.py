@@ -8,6 +8,18 @@ T = TypeVar("T")
 
 
 class CoNLL2003ForNER(DatasetForNER):
+    NER_TAG_2_IDX = {
+        "O": 0,
+        "B-PER": 1,
+        "I-PER": 2,
+        "B-ORG": 3,
+        "I-ORG": 4,
+        "B-LOC": 5,
+        "I-LOC": 6,
+        "B-MISC": 7,
+        "I-MISC": 8,
+    }
+    NER_IDX_2_TAG = {v: k for k, v in NER_TAG_2_IDX.items()}
     HUGGINGFACE_DATASET_NAME = "conll2003"
 
     def __init__(self, hf_data):
@@ -27,11 +39,13 @@ class CoNLL2003ForNER(DatasetForNER):
         return self._data
 
     @classmethod
-    def load(cls: T, dataset_name=None) -> Dict[str, T]:
+    def load(cls: T, dataset_name=None, **kwargs) -> Dict[str, T]:
         assert dataset_name is None or dataset_name == cls.HUGGINGFACE_DATASET_NAME
         ds_dict = load_dataset(cls.HUGGINGFACE_DATASET_NAME)
         return {k: cls(v) for k, v in ds_dict.items()}
 
-    @staticmethod
-    def _transform_to_task_specific_format(item):
-        return item
+    def _transform_to_task_specific_format(self, item):
+        return {
+            "words": item["tokens"],
+            "ner_tags": item["ner_tags"],
+        }

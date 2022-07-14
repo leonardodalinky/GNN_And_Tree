@@ -1,6 +1,9 @@
 from typing import Dict, TypeVar
 
+import torch
 from datasets import load_dataset
+from transformers import BertTokenizer
+from torch.utils.data import TensorDataset
 
 from .base import DatasetForRE
 
@@ -9,10 +12,13 @@ T = TypeVar("T")
 
 class SemEvalForRE(DatasetForRE):
     HUGGINGFACE_DATASET_NAME = "sem_eval_2010_task_8"
+    BERT_TOKENIZER_NAME = "bert-base-uncased"
+    MAX_SEQ_LEN = 128
 
     def __init__(self, hf_data):
         super(SemEvalForRE, self).__init__()
-        self._data = hf_data
+        self.tokenizer: BertTokenizer = BertTokenizer.from_pretrained(self.BERT_TOKENIZER_NAME, do_lower_case=True)
+        self._data = self._transform_dataset(hf_data)
 
     @classmethod
     def get_dataset_name(cls):
@@ -20,18 +26,66 @@ class SemEvalForRE(DatasetForRE):
 
     @property
     def inner_data(self):
-        """
-        Example of each row:
-            {'sentence': 'The system as described above has its greatest application in an arrayed <e1>configuration</e1> of antenna <e2>elements</e2>.', 'relation': 3}
-        """
         return self._data
 
     @classmethod
-    def load(cls: T, dataset_name=None) -> Dict[str, T]:
+    def load(cls: T, dataset_name=None, **kwargs) -> Dict[str, T]:
         assert dataset_name is None or dataset_name == cls.HUGGINGFACE_DATASET_NAME
         ds_dict = load_dataset(cls.HUGGINGFACE_DATASET_NAME)
         return {k: cls(v) for k, v in ds_dict.items()}
 
-    @staticmethod
-    def _transform_to_task_specific_format(item):
-        return item
+    def _transform_dataset(self, hf_data) -> TensorDataset:
+        """
+        Example of each row of hf_data:
+            {'sentence': 'The system as described above has its greatest application in an arrayed <e1>configuration</e1> of antenna <e2>elements</e2>.', 'relation': 3}
+        """
+        input_ids = []
+        attention_masks = []
+        labels = []
+        e1_pos = []
+        e2_pos = []
+        for item in hf_data:
+            encoded_dict = self.tokenizer(
+                item["sentence"],
+                add_special_tokens=True,
+                padding="max_length",
+                truncation=False,
+                max_length=self.MAX_SEQ_LEN,
+                return_attention_mask=True,
+                return_tensors="pt",
+            )
+            try:
+                # find position of <e1> and <e2>
+                ids = encoded_dict["input_ids"]
+                mask = encoded_dict["attention_mask"]
+                # Find e1(id:2487) and e2(id:2475) position
+                pos1 = (ids == 2487).nonzero()[0][1].item()
+                pos2 = (ids == 2475).nonzero()[0][1].item()
+                if pos1 > self.MAX_SEQ_LEN:
+                    pos1 = -1
+                if pos2 > self.MAX_SEQ_LEN:
+                    pos2 = -1
+                # truncate manually
+                if ids.shape[1] > self.MAX_SEQ_LEN:
+                    ids = torch.narrow_copy(ids, 1, 0, self.MAX_SEQ_LEN)
+                    ids[0, -1] = self.tokenizer.sep_token_id
+                    mask = torch.narrow_copy(mask, 1, 0, self.MAX_SEQ_LEN)
+                e1_pos.append(pos1)
+                e2_pos.append(pos2)
+                # Add the encoded sentence to the list.
+                input_ids.append(ids)
+                # And its attention mask (simply differentiates padding from non-padding).
+                attention_masks.append(mask)
+                labels.append(item["relation"])
+            except:
+                pass
+
+        # Convert the lists into tensors.
+        input_ids = torch.cat(input_ids, dim=0)
+        attention_masks = torch.cat(attention_masks, dim=0)
+        labels = torch.tensor(labels)
+        e1_pos = torch.tensor(e1_pos)
+        e2_pos = torch.tensor(e2_pos)
+
+        # Combine the training inputs into a TensorDataset.
+        return TensorDataset(input_ids, attention_masks, labels, e1_pos, e2_pos)

@@ -1,5 +1,8 @@
 # pytorch
+# pyg
+transformers
 datasets
+PyYAML
 pre-commit
 black
 isort

@@ -11,7 +11,7 @@ class DatasetBase(Dataset, ABC):
         super(DatasetBase, self).__init__()
 
     def __getitem__(self, index):
-        return self._transform_to_task_specific_format(self.inner_data[index])
+        return self.inner_data[index]
 
     def __len__(self):
         return len(self.inner_data)
@@ -21,10 +21,6 @@ class DatasetBase(Dataset, ABC):
 
     def __repr__(self):
         return str(self)
-
-    @staticmethod
-    def _transform_to_task_specific_format(item):
-        return item
 
     @classmethod
     def load(cls: T, dataset_name: str) -> Dict[str, T]:

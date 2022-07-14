@@ -8,6 +8,47 @@ T = TypeVar("T")
 
 
 class OntoNotesv5ForNER(DatasetForNER):
+    _NER_TAGS = [
+        "O",
+        "B-PERSON",
+        "I-PERSON",
+        "B-NORP",
+        "I-NORP",
+        "B-FAC",
+        "I-FAC",
+        "B-ORG",
+        "I-ORG",
+        "B-GPE",
+        "I-GPE",
+        "B-LOC",
+        "I-LOC",
+        "B-PRODUCT",
+        "I-PRODUCT",
+        "B-DATE",
+        "I-DATE",
+        "B-TIME",
+        "I-TIME",
+        "B-PERCENT",
+        "I-PERCENT",
+        "B-MONEY",
+        "I-MONEY",
+        "B-QUANTITY",
+        "I-QUANTITY",
+        "B-ORDINAL",
+        "I-ORDINAL",
+        "B-CARDINAL",
+        "I-CARDINAL",
+        "B-EVENT",
+        "I-EVENT",
+        "B-WORK_OF_ART",
+        "I-WORK_OF_ART",
+        "B-LAW",
+        "I-LAW",
+        "B-LANGUAGE",
+        "I-LANGUAGE",
+    ]
+    NER_TAG_2_IDX = {tag: i for i, tag in enumerate(_NER_TAGS)}
+    NER_IDX_2_TAG = {v: k for k, v in NER_TAG_2_IDX.items()}
     HUGGINGFACE_DATASET_NAME = "conll2012_ontonotesv5"
     HUGGINGFACE_SUBDATASET_NAME = "english_v4"
 
@@ -28,7 +69,7 @@ class OntoNotesv5ForNER(DatasetForNER):
         return self._data
 
     @classmethod
-    def load(cls: T, dataset_name=None) -> Dict[str, T]:
+    def load(cls: T, dataset_name=None, **kwargs) -> Dict[str, T]:
         assert dataset_name is None or dataset_name == cls.HUGGINGFACE_DATASET_NAME
         ds_dict = load_dataset(cls.HUGGINGFACE_DATASET_NAME, cls.HUGGINGFACE_SUBDATASET_NAME)
         ret = {}
@@ -38,7 +79,8 @@ class OntoNotesv5ForNER(DatasetForNER):
                 ret[k] += doc["sentences"]
         return ret
 
-    @staticmethod
-    def _transform_to_task_specific_format(item):
-        # TODO
-        return item
+    def _transform_to_task_specific_format(self, item):
+        return {
+            "words": item["words"],
+            "ner_tags": item["named_entities"],
+        }
