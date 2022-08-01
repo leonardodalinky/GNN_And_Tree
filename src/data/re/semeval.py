@@ -44,6 +44,7 @@ class SemEvalForRE(DatasetForRE):
         labels = []
         e1_pos = []
         e2_pos = []
+        actual_lens = []
         for item in hf_data:
             encoded_dict = self.tokenizer(
                 item["sentence"],
@@ -76,16 +77,19 @@ class SemEvalForRE(DatasetForRE):
                 input_ids.append(ids)
                 # And its attention mask (simply differentiates padding from non-padding).
                 attention_masks.append(mask)
+                actual_len = torch.max(torch.arange(1, self.MAX_SEQ_LEN + 1, dtype=torch.long) * mask).item()
                 labels.append(item["relation"])
+                actual_lens.append(actual_len)
             except:
                 pass
 
         # Convert the lists into tensors.
         input_ids = torch.cat(input_ids, dim=0)
         attention_masks = torch.cat(attention_masks, dim=0)
-        labels = torch.tensor(labels)
-        e1_pos = torch.tensor(e1_pos)
-        e2_pos = torch.tensor(e2_pos)
+        labels = torch.tensor(labels, dtype=torch.long)
+        e1_pos = torch.tensor(e1_pos, dtype=torch.long)
+        e2_pos = torch.tensor(e2_pos, dtype=torch.long)
+        actual_lens = torch.tensor(actual_lens, dtype=torch.long)
 
         # Combine the training inputs into a TensorDataset.
         return TensorDataset(input_ids, attention_masks, labels, e1_pos, e2_pos)
