@@ -1,4 +1,5 @@
 import torch
+from torch_geometric.data import Data, Batch
 
 from .base import TreeBase
 
@@ -29,14 +30,23 @@ class LeftTree(TreeBase):
             attention_mask=attention_masks,
             return_dict=True,
         )
-        ret = list()
+        edges = list()
         embeds = output_dict["last_hidden_state"]  # (batch_size, seq_len, hidden_size)
         # build left tree edges
         B, _, _ = embeds.shape
         for b in range(B):
             actual_len = actual_lens[b].item()
-            edges = torch.zeros((2, actual_len - 1), dtype=torch.long)
-            edges[0] = torch.arange(1, actual_len, dtype=torch.long)
-            edges[1] = torch.arange(0, actual_len - 1, dtype=torch.long)
-            ret.append(edges)
-        return embeds, torch.stack(ret, dim=0)  # (batch_size, seq_len, hidden_size), (batch_size, 2, seq_len - 1)
+            edge = torch.zeros((2, actual_len - 1), dtype=torch.long, device=embeds.device)
+            edge[0] = torch.arange(1, actual_len, dtype=torch.long, device=embeds.device)
+            edge[1] = torch.arange(0, actual_len - 1, dtype=torch.long, device=embeds.device)
+            edges.append(edge)
+        # construct batch
+        data_list = list()
+        for embed, edge in zip(embeds, edges):
+            # embed: (seq_len, hidden_size), edge: (2, each_edge_size)
+            data_list.append(Data(x=embed, edge_index=edge))
+        return (
+            embeds,
+            edges,
+            Batch.from_data_list(data_list),
+        )  # (batch_size, seq_len, hidden_size), list(2, each_edge_size), Batch

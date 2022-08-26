@@ -9,7 +9,7 @@ class GCN(nn.Module):
         self.gcn = GCNConv(768, 768)
 
     def forward(self, x, edge_index):
-        # x: (batch_size, seq_len, hidden_size)
-        # edge_index: (batch_size, 2, seq_len - 1)
+        # x: (batch_seq_len, hidden_size)
+        # edge_index: (2, batch_edges)
         x = self.gcn(x, edge_index)
-        return x
+        return x  # (batch_size, seq_len, hidden_size)

@@ -92,4 +92,4 @@ class SemEvalForRE(DatasetForRE):
         actual_lens = torch.tensor(actual_lens, dtype=torch.long)
 
         # Combine the training inputs into a TensorDataset.
-        return TensorDataset(input_ids, attention_masks, labels, e1_pos, e2_pos)
+        return TensorDataset(input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens)

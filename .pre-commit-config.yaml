@@ -16,10 +16,6 @@ repos:
         name: check-added-large-files
         entry: check-added-large-files
         language: system
-      - id: destroyed-symlinks
-        name: destroyed-symlinks
-        entry: destroyed-symlinks
-        language: system
       - id: check-yaml
         name: check-yaml
         entry: check-yaml
