@@ -10,6 +10,5 @@ class DatasetForEE(DatasetBase):
         super(DatasetForEE, self).__init__()
 
     @classmethod
-    def load(cls: T, dataset_name: str, **kwargs) -> Dict[str, T]:
-        # TODO: subclass this class and implement this method
-        pass
+    def get_children_classes():
+        raise NotImplementedError

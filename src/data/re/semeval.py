@@ -32,7 +32,10 @@ class SemEvalForRE(DatasetForRE):
     def load(cls: T, dataset_name=None, **kwargs) -> Dict[str, T]:
         assert dataset_name is None or dataset_name == cls.HUGGINGFACE_DATASET_NAME
         ds_dict = load_dataset(cls.HUGGINGFACE_DATASET_NAME)
-        return {k: cls(v) for k, v in ds_dict.items()}
+        return {
+            "train": cls(ds_dict["train"]),
+            "validate": cls(ds_dict["test"]),
+        }
 
     def _transform_dataset(self, hf_data) -> TensorDataset:
         """

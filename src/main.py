@@ -1,12 +1,12 @@
 import os
 import logging
+import argparse
 
+import yaml
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchmetrics as tm
-import torch.functional as F
-import torch.utils.data
 import pytorch_lightning as pl
 import torch.optim.lr_scheduler as lr_scheduler
 import pytorch_lightning.loggers as pl_loggers
@@ -14,8 +14,8 @@ import pytorch_lightning.callbacks as pl_callbacks
 from torch_geometric.data import Data, Batch
 from pytorch_lightning.utilities.seed import seed_everything
 
-from data.re import DatasetForRE
-from model.gcn import GCN
+from gnn.gcn import GCN
+from datamodule import DataModule
 from tree.left_tree import LeftTree
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
@@ -25,44 +25,31 @@ SRC_DIR = os.path.realpath(f"{__file__}/..")
 ROOT_DIR = os.path.realpath(f"{SRC_DIR}/..")
 PROJECT_NAME = "test"
 
-
-class DataModule(pl.LightningDataModule):
-    def __init__(self, batch_size=256, workers=4):
-        super(DataModule, self).__init__()
-        self.batch_size = batch_size
-        self.workers = workers
-        self.train_dataset = None
-        self.val_dataset = None
-
-    def setup(self, stage) -> None:
-        if stage != "test":
-            datasets = DatasetForRE.load("sem_eval_2010_task_8")
-
-        if stage in (None, "fit"):
-            self.train_dataset = datasets["train"]
-
-        if stage in (None, "fit", "validate"):
-            self.val_dataset = datasets["test"]
-
-    def train_dataloader(self):
-        return torch.utils.data.DataLoader(
-            self.train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.workers,
-            pin_memory=True,
-            persistent_workers=True,
-        )
-
-    def val_dataloader(self):
-        return torch.utils.data.DataLoader(
-            self.val_dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.workers,
-            pin_memory=True,
-            persistent_workers=True,
-        )
+parser = argparse.ArgumentParser(description="Graph Neural Network Experiments")
+parser.add_argument(
+    "-c",
+    "--config",
+    type=argparse.FileType("r", encoding="utf-8"),
+    metavar="PATH",
+    required=True,
+)
+parser.add_argument(
+    "-v",
+    "--project-version",
+    type=str,
+    metavar="VER",
+    required=True,
+)
+parser.add_argument(
+    "-n",
+    "--project-name",
+    type=str,
+    metavar="NAME",
+    required=True,
+)
+parser.add_argument(
+    "-s", "--stage", type=str, metavar="STAGE", required=True, help="Should be `fit`, `validate` or `test`."
+)
 
 
 class Model(pl.LightningModule):
@@ -142,34 +129,23 @@ class Model(pl.LightningModule):
         }
 
 
-# def train(model, device, train_loader, optimizer, epoch):
-#     model.train()
-#     for batch_idx, data in enumerate(train_loader):
-#         input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens = (item.to(device) for item in data)
-#         optimizer.zero_grad()
-#         output = model(input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens)
-#         loss = F.cross_entropy(output, labels)
-#         loss.backward()
-#         optimizer.step()
-#         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-#             epoch, batch_idx * len(data), len(train_loader.dataset),
-#             100. * batch_idx / len(train_loader), loss.item()))
-
-
 def main():
     seed_everything(42)
 
-    version = "TEST"
+    args = parser.parse_args()
 
-    data_module = DataModule(
-        batch_size=32,
-    )
+    project_version = args.project_version
+    project_name = args.project_name
+
+    config = yaml.safe_load(args.config)
+
+    data_module = DataModule(config)
 
     callbacks = [
         pl_callbacks.LearningRateMonitor(),
         pl_callbacks.ModelCheckpoint(
-            dirpath=os.path.realpath(f"{ROOT_DIR}/checkpoints/{PROJECT_NAME}"),
-            filename=f"{version}-{PROJECT_NAME}" + "-{epoch}-{val_acc:.2f}",
+            dirpath=os.path.realpath(f"{ROOT_DIR}/checkpoints/{project_name}"),
+            filename=f"{project_name}-{project_version}" + "-{epoch}-{val_acc:.2f}",
             monitor="val_acc",
             mode="max",
             save_last=True,
@@ -179,8 +155,8 @@ def main():
 
     tb_logger = pl_loggers.TensorBoardLogger(
         save_dir=os.path.join(ROOT_DIR, "tb_logs"),
-        name=PROJECT_NAME,
-        version=f"train-{version}",
+        name=project_name,
+        version=f"train-{project_version}",
     )
 
     trainer = pl.Trainer(

@@ -1,4 +1,4 @@
-from typing import Dict, TypeVar
+from typing import Dict, Type, TypeVar
 
 from ..base import DatasetBase
 
@@ -10,13 +10,8 @@ class DatasetForRE(DatasetBase):
         super(DatasetForRE, self).__init__()
 
     @classmethod
-    def load(cls: T, dataset_name: str, **kwargs) -> Dict[str, T]:
+    def get_children_classes():
         from .tacred import TacredForRE
         from .semeval import SemEvalForRE
 
-        clss = [SemEvalForRE]
-        names = [c.get_dataset_name() for c in clss]
-        for c, name in zip(clss, names):
-            if name == dataset_name:
-                return c.load()
-        raise ValueError(f"Dataset {dataset_name} not found, available datasets: {names}")
+        return [SemEvalForRE, TacredForRE]

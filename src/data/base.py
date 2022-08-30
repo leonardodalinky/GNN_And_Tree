@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, TypeVar
+from typing import Dict, Type, TypeVar
 
 from torch.utils.data import Dataset
 
@@ -23,8 +23,25 @@ class DatasetBase(Dataset, ABC):
         return str(self)
 
     @classmethod
-    def load(cls: T, dataset_name: str) -> Dict[str, T]:
-        pass
+    def load(cls: T, dataset_name: str, **kwargs) -> Dict[str, T]:
+        clss = cls.get_children_classes()
+        names = [c.get_dataset_name() for c in clss]
+        for c, name in zip(clss, names):
+            if name == dataset_name:
+                return c.load()
+        raise ValueError(f"Dataset {dataset_name} not found, available datasets: {names}")
+
+    @classmethod
+    def load_cls(cls, dataset_name: str) -> Type[T]:
+        """
+        Return class of the dataset.
+        """
+        clss = cls.get_children_classes()
+        names = [c.get_dataset_name() for c in clss]
+        for c, name in zip(clss, names):
+            if name == dataset_name:
+                return c
+        raise ValueError(f"Dataset {dataset_name} not found, available datasets: {names}")
 
     @property
     @abstractmethod
@@ -34,4 +51,8 @@ class DatasetBase(Dataset, ABC):
     @classmethod
     @abstractmethod
     def get_dataset_name(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def get_children_classes():
         raise NotImplementedError
