@@ -14,6 +14,8 @@ class SemEvalForRE(DatasetForRE):
     HUGGINGFACE_DATASET_NAME = "sem_eval_2010_task_8"
     BERT_TOKENIZER_NAME = "bert-base-uncased"
     MAX_SEQ_LEN = 128
+    CLASSES_NUM = 19
+    IGNORED_CLASS_INDEX = 0
 
     def __init__(self, hf_data):
         super(SemEvalForRE, self).__init__()

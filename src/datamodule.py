@@ -33,13 +33,13 @@ class DataModule(pl.LightningDataModule):
             datasets = DatasetForEE.load(self.dataset_name)
 
         if stage in (None, "fit"):
-            self.train_dataset = datasets.get("train", None)
+            self.train_dataset = datasets.get("train")
 
         if stage in (None, "fit", "validate"):
-            self.val_dataset = datasets.get("validate", None)
+            self.val_dataset = datasets.get("validate")
 
         if stage in (None, "fit", "validate", "test"):
-            self.test_dataset = datasets.get("test", None)
+            self.test_dataset = datasets.get("test")
 
     def train_dataloader(self):
         assert self.train_dataset is not None, "Couldn't get to training dataset."

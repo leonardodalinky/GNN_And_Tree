@@ -32,7 +32,7 @@ class DatasetBase(Dataset, ABC):
         raise ValueError(f"Dataset {dataset_name} not found, available datasets: {names}")
 
     @classmethod
-    def load_cls(cls, dataset_name: str) -> Type[T]:
+    def load_cls(cls: T, dataset_name: str) -> Type[T]:
         """
         Return class of the dataset.
         """

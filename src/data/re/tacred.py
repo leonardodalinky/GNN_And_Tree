@@ -13,7 +13,7 @@ class TacredForRE(DatasetForRE):
     LOCAL_DATASET_NAME = "tacred"
 
     def __init__(self):
-        super(SemEvalForRE, self).__init__()
+        super(TacredForRE, self).__init__()
 
     @classmethod
     def get_dataset_name(cls):
