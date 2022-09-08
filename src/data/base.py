@@ -28,7 +28,7 @@ class DatasetBase(Dataset, ABC):
         names = [c.get_dataset_name() for c in clss]
         for c, name in zip(clss, names):
             if name == dataset_name:
-                return c.load()
+                return c.load(**kwargs)
         raise ValueError(f"Dataset {dataset_name} not found, available datasets: {names}")
 
     @classmethod
@@ -54,5 +54,5 @@ class DatasetBase(Dataset, ABC):
         raise NotImplementedError
 
     @classmethod
-    def get_children_classes():
+    def get_children_classes(cls):
         raise NotImplementedError

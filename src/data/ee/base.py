@@ -10,5 +10,5 @@ class DatasetForEE(DatasetBase):
         super(DatasetForEE, self).__init__()
 
     @classmethod
-    def get_children_classes():
+    def get_children_classes(cls):
         raise NotImplementedError

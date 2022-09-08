@@ -18,7 +18,12 @@ class LeftTree(TreeBase):
         Outputs:
             Left tree
         """
-        input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens = args
+        assert len(args) == 1
+        data_dict = args[0]
+        input_ids = data_dict["input_ids"]
+        attention_masks = data_dict["attention_masks"]
+        actual_lens = data_dict["actual_lens"]
+
         output_dict = self.bert(
             input_ids=input_ids,
             attention_mask=attention_masks,

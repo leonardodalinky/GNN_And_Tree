@@ -3,7 +3,8 @@ from typing import Dict, TypeVar
 import torch
 from datasets import load_dataset
 from transformers import BertTokenizer
-from torch.utils.data import TensorDataset
+
+from utils.data import DictTensorDataset
 
 from .base import DatasetForRE
 
@@ -39,7 +40,7 @@ class SemEvalForRE(DatasetForRE):
             "validate": cls(ds_dict["test"]),
         }
 
-    def _transform_dataset(self, hf_data) -> TensorDataset:
+    def _transform_dataset(self, hf_data) -> DictTensorDataset:
         """
         Example of each row of hf_data:
             {'sentence': 'The system as described above has its greatest application in an arrayed <e1>configuration</e1> of antenna <e2>elements</e2>.', 'relation': 3}
@@ -53,7 +54,7 @@ class SemEvalForRE(DatasetForRE):
         for item in hf_data:
             encoded_dict = self.tokenizer(
                 item["sentence"],
-                add_special_tokens=True,
+                add_special_tokens=False,
                 padding="max_length",
                 truncation=False,
                 max_length=self.MAX_SEQ_LEN,
@@ -82,8 +83,8 @@ class SemEvalForRE(DatasetForRE):
                 input_ids.append(ids)
                 # And its attention mask (simply differentiates padding from non-padding).
                 attention_masks.append(mask)
-                actual_len = torch.max(torch.arange(1, self.MAX_SEQ_LEN + 1, dtype=torch.long) * mask).item()
                 labels.append(item["relation"])
+                actual_len = torch.max(torch.arange(1, self.MAX_SEQ_LEN + 1, dtype=torch.long) * mask).item()
                 actual_lens.append(actual_len)
             except:
                 pass
@@ -97,4 +98,13 @@ class SemEvalForRE(DatasetForRE):
         actual_lens = torch.tensor(actual_lens, dtype=torch.long)
 
         # Combine the training inputs into a TensorDataset.
-        return TensorDataset(input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens)
+        return DictTensorDataset(
+            {
+                "input_ids": input_ids,
+                "attention_masks": attention_masks,
+                "labels": labels,
+                "e1_pos": e1_pos,
+                "e2_pos": e2_pos,
+                "actual_lens": actual_lens,
+            }
+        )

@@ -13,7 +13,7 @@ class DatasetForRE(DatasetBase):
         super(DatasetForRE, self).__init__()
 
     @classmethod
-    def get_children_classes():
+    def get_children_classes(cls):
         from .tacred import TacredForRE
         from .semeval import SemEvalForRE
 

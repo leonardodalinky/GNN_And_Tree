@@ -13,7 +13,7 @@ class DatasetForNER(DatasetBase):
         super(DatasetForNER, self).__init__()
 
     @classmethod
-    def get_children_classes():
+    def get_children_classes(cls):
         from .conll2003 import CoNLL2003ForNER
         from .ontonotesv5 import OntoNotesv5ForNER
 

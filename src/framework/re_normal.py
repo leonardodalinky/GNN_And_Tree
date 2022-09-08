@@ -1,12 +1,15 @@
+from typing import Dict
+
 import torch
 import torch.nn as nn
 import torchmetrics as tm
 from torch_geometric.data import Batch
 
-from ..gnn import get_gnn_class
+from gnn import get_gnn_class
+from data import DatasetForRE
+from tree import get_tree_class
+
 from .base import ModelBase
-from ..data import DatasetForRE
-from ..tree import get_tree_class
 
 
 class ReNormal(ModelBase):
@@ -45,11 +48,11 @@ class ReNormal(ModelBase):
 
         self.save_hyperparameters()
 
-    def forward(self, *args):
+    def forward(self, data_dict: Dict[str, torch.Tensor]):
         # x: (batch_size, seq_len)
         batch: Batch
         embeds, edges, batch = self.tree(
-            *args, task_type="re"
+            data_dict, task_type="re"
         )  # embeds: (batch_size, seq_len, hidden_size), edges: list(2, edges_num), Batch
 
         x = self.gnn(batch.x, batch.edge_index)  # x: (batch_seq_len, hidden_size)
@@ -59,12 +62,12 @@ class ReNormal(ModelBase):
         return x
 
     def training_step(self, batch, batch_idx):
-        input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens = batch
-        y_hat = self.forward(input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens)
+        labels = batch["labels"]
+        y_hat = self.forward(batch)
         loss = self.criterion(y_hat, labels)
 
         # metrics
-        self.log("train_loss", loss, on_step=True, on_epoch=True)
+        self.log("train_loss", loss, on_epoch=True, sync_dist=True)
 
         self.train_acc_w(y_hat, labels)
         self.log("train_acc_w", self.train_acc_w, on_epoch=True)
@@ -80,8 +83,8 @@ class ReNormal(ModelBase):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens = batch
-        y_hat = self.forward(input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens)
+        labels = batch["labels"]
+        y_hat = self.forward(batch)
 
         self.val_acc_w(y_hat, labels)
         self.log("val_acc_w", self.val_acc_w, on_epoch=True)
