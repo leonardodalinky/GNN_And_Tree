@@ -8,13 +8,13 @@ import torch.nn as nn
 import torch.optim as optim
 import torchmetrics as tm
 import pytorch_lightning as pl
-import torch.optim.lr_scheduler as lr_scheduler
 import pytorch_lightning.loggers as pl_loggers
 import pytorch_lightning.callbacks as pl_callbacks
-from torch_geometric.data import Data, Batch
+from torch_geometric.data import Batch
 from pytorch_lightning.utilities.seed import seed_everything
 
 from gnn.gcn import GCN
+from framework import get_framework_class
 from datamodule import DataModule
 from tree.left_tree import LeftTree
 
@@ -47,86 +47,10 @@ parser.add_argument(
     metavar="NAME",
     required=True,
 )
+parser.add_argument("-g", "--gpus", type=int, metavar="GPU_NUM", default=1, help="Number of GPUs.")
 parser.add_argument(
     "-s", "--stage", type=str, metavar="STAGE", required=True, help="Should be `fit`, `validate` or `test`."
 )
-
-
-class Model(pl.LightningModule):
-    def __init__(
-        self,
-        lr=1e-4,
-        weight_decay=5e-4,
-    ):
-        super(Model, self).__init__()
-        # hyperparameters
-        self.lr = lr
-        self.weight_decay = weight_decay
-
-        self.tree = LeftTree()
-        self.gcn = GCN()
-        self.classifier = nn.Linear(768, 19)
-        self.criterion = nn.CrossEntropyLoss()
-
-        # metrics
-        self.train_acc = tm.Accuracy()
-        self.train_f1 = tm.F1Score(average="micro")
-        self.val_acc = tm.Accuracy()
-        self.val_f1 = tm.F1Score(average="micro")
-
-        self.save_hyperparameters()
-
-    def forward(self, *args):
-        # x: (batch_size, seq_len)
-        batch: Batch
-        embeds, edges, batch = self.tree(
-            *args, task_type="re"
-        )  # embeds: (batch_size, seq_len, hidden_size), edges: list(2, edges_num), Batch
-
-        x = self.gcn(batch.x, batch.edge_index)  # x: (batch_seq_len, hidden_size)
-        x = torch.reshape(x, embeds.shape)  # x: (batch, seq_len, hidden_size)
-        x = torch.mean(x, dim=1)  # x: (batch_size, hidden_size)
-        x = self.classifier(x)  # x: (batch_size, 19)
-        return x
-
-    def training_step(self, batch, batch_idx):
-        input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens = batch
-        y_hat = self.forward(input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens)
-        loss = self.criterion(y_hat, labels)
-
-        # metrics
-        self.log("train_loss", loss, on_step=True, on_epoch=True)
-
-        self.train_acc(y_hat, labels)
-        self.log("train_acc", self.train_acc, on_epoch=True)
-
-        self.train_f1(y_hat, labels)
-        self.log("train_f1", self.train_f1, on_epoch=True)
-
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens = batch
-        y_hat = self.forward(input_ids, attention_masks, labels, e1_pos, e2_pos, actual_lens)
-
-        self.val_acc(y_hat, labels)
-        self.log("val_acc", self.val_acc, on_epoch=True)
-
-        self.val_f1(y_hat, labels)
-        self.log("val_f1", self.val_f1, on_epoch=True)
-
-    def configure_optimizers(self):
-        optimizer = optim.AdamW(
-            filter(lambda p: p.requires_grad, self.parameters()),
-            betas=(0.9, 0.999),
-            lr=self.lr,
-            weight_decay=self.weight_decay,
-        )
-        # lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.epochs)
-        return {
-            "optimizer": optimizer,
-            # "lr_scheduler": lr_scheduler,
-        }
 
 
 def main():
@@ -140,6 +64,8 @@ def main():
     config = yaml.safe_load(args.config)
 
     data_module = DataModule(config)
+
+    model = get_framework_class(config["model"]["framework"])(config)
 
     callbacks = [
         pl_callbacks.LearningRateMonitor(),
@@ -161,15 +87,18 @@ def main():
 
     trainer = pl.Trainer(
         accelerator="gpu",
-        devices=1,
+        devices=args.gpus,
         # strategy="ddp",
         logger=tb_logger,
-        max_epochs=20,
+        max_epochs=config["task"]["train"].get("epochs", 30),
         callbacks=callbacks,
     )
 
-    model = Model()
-    trainer.fit(model, datamodule=data_module)
+    assert args.stage in ("train", "validate", "test")
+    if args.stage == "train":
+        trainer.fit(model, datamodule=data_module)
+    else:
+        raise NotImplementedError(f"Stage {args.stage} is not implemented yet.")
 
 
 if __name__ == "__main__":

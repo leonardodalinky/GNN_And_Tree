@@ -12,12 +12,10 @@ class DataModule(pl.LightningDataModule):
         super(DataModule, self).__init__()
         self.type = config["task"]["type"]
         assert self.type in ["re", "ner", "ee"]
-        dataset_config = config["task"]["dataset"]
-        self.dataset_name = dataset_config["name"]
-        self.batch_size = dataset_config["batch_size"]
-        self.workers = dataset_config.get("workers", 4)
-        if dataset_config.get("local", False):
-            raise NotImplementedError("`local` datasets is not supported now.")
+        self.dataset_config = config["task"]["dataset"]
+        self.dataset_name = self.dataset_config["name"]
+        self.batch_size = self.dataset_config["batch_size"]
+        self.workers = self.dataset_config.get("workers", 4)
 
         self.train_dataset = None
         self.val_dataset = None
@@ -26,11 +24,11 @@ class DataModule(pl.LightningDataModule):
     def setup(self, stage) -> None:
         # get datasets by task type and dataset name
         if self.type == "re":
-            datasets = DatasetForRE.load(self.dataset_name)
+            datasets = DatasetForRE.load(self.dataset_name, dataset_config=self.dataset_config)
         elif self.type == "ner":
-            datasets = DatasetForNER.load(self.dataset_name)
+            datasets = DatasetForNER.load(self.dataset_name, dataset_config=self.dataset_config)
         elif self.type == "ee":
-            datasets = DatasetForEE.load(self.dataset_name)
+            datasets = DatasetForEE.load(self.dataset_name, dataset_config=self.dataset_config)
 
         if stage in (None, "fit"):
             self.train_dataset = datasets.get("train")

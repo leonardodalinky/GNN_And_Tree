@@ -38,8 +38,10 @@ class TacredForRE(DatasetForRE):
     @classmethod
     def load(cls: T, dataset_name=None, **kwargs) -> Dict[str, T]:
         assert dataset_name is None or dataset_name == cls.LOCAL_DATASET_NAME
-        assert kwargs["local"] == True
-        assert kwargs["local_path"] is not None
+        dc = kwargs.get("dataset_config")
+        assert dc is not None
+        assert dc["local"] == True, "Tacred dataset can only be loaded from local path."
+        assert dc["local_path"] is not None
         json_dir = Path(kwargs["local_path"]) / "json"
         assert json_dir.exists()
         d = {

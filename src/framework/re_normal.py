@@ -21,10 +21,9 @@ class ReNormal(ModelBase):
         # hyperparameters
         self.dataset_cls = DatasetForRE.load_cls(config["task"]["dataset"]["name"])
         self.classes_num = self.dataset_cls.CLASSES_NUM
-        config_train = config["task"].get("train")
-        if config_train is not None:
-            self.lr = config_train.get("lr", 1.0e-4)
-            self.weight_decay = config_train.get("weight_decay", 5.0e-4)
+        config_train = config["task"].get("train", {})
+        self.lr = config_train.get("lr", 1.0e-4)
+        self.weight_decay = config_train.get("weight_decay", 5.0e-4)
 
         # model compositions
         self.tree = get_tree_class(config["model"]["tree"])()
@@ -95,7 +94,12 @@ class ReNormal(ModelBase):
             self.val_f1_wo(y_hat, labels)
             self.log("val_f1_wo", self.val_f1_wo, on_epoch=True)
 
+    def test_step(self, batch, batch_idx):
+        # TODO
+        pass
+
     def configure_optimizers(self):
+        epochs = self.config["task"]["train"].get("epochs", 30)
         optimizer = torch.optim.AdamW(
             filter(lambda p: p.requires_grad, self.parameters()),
             betas=(0.9, 0.999),

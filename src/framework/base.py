@@ -9,4 +9,5 @@ class ModelBase(pl.LightningModule):
     FRAMEWORK_NAME = "model_base"
 
     def __init__(self, config):
+        super().__init__()
         pass
