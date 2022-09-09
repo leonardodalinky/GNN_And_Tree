@@ -67,7 +67,7 @@ def main():
             filename=f"{project_name}-{project_version}" + "-{epoch}-{val_f1_wo:.2f}",
             monitor="val_f1_wo",
             mode="max",
-            save_last=True,
+            # save_last=True,
             save_top_k=1,
         ),
     ]

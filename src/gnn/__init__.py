@@ -1,4 +1,5 @@
 from .gcn import GCN
+from .gcn_dropout import GCN_Dropout
 
 REGISTERED_GNN_CLASSES = dict()
 
@@ -14,3 +15,4 @@ def get_gnn_class(name: str):
 
 
 register_gnn_class(GCN, "gcn")
+register_gnn_class(GCN_Dropout, "gcn_dropout")

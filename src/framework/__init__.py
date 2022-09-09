@@ -3,6 +3,7 @@ from typing import Type, Optional
 from .base import ModelBase
 from .re_normal import ReNormal
 from .ner_normal import NerNormal
+from .re_normal_v2 import ReNormal_v2
 
 REGISTERED_FRAMEWORK_CLASSES = dict()
 
@@ -21,4 +22,5 @@ def get_framework_class(name: str) -> Type[ModelBase]:
 
 
 register_framework_class(ReNormal)
+register_framework_class(ReNormal_v2)
 register_framework_class(NerNormal)

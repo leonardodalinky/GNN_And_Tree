@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd "$(dirname $0)"
+
+export CUDA_VISIBLE_DEVICES=1
+
+export PROJECT_VERSION="${tree_name}-${gnn_name}-${framework_name}-${timestamp}"
+export PROJECT_NAME="${project_name}"
+export STAGE="${stage}"
+export SCRIPT_PATH="../../src/main.py"
+export CONFIG_PATH="config.yml"
+
+bash base.sh
