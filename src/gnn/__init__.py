@@ -3,7 +3,7 @@ from .gcn import GCN
 REGISTERED_GNN_CLASSES = dict()
 
 
-def register_gnn_class(name: str, cls):
+def register_gnn_class(cls, name):
     REGISTERED_GNN_CLASSES[name] = cls
 
 
@@ -13,4 +13,4 @@ def get_gnn_class(name: str):
     return ret
 
 
-register_gnn_class("gcn", GCN)
+register_gnn_class(GCN, "gcn")

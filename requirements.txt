@@ -4,5 +4,6 @@ transformers
 datasets
 PyYAML
 pre-commit
+pre-commit-hooks
 black
 isort

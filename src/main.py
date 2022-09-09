@@ -71,8 +71,15 @@ def main():
             save_top_k=1,
         ),
     ]
-    if config["task"]["train"].get("early_stopping", False):
-        callbacks.append(pl_callbacks.EarlyStopping("val_f1_wo", patience=5, mode="max"))
+    early_stopping = config["task"]["train"].get("early_stopping", False)
+    if isinstance(early_stopping, bool) and early_stopping:
+        callbacks.append(pl_callbacks.EarlyStopping("val_f1_wo", patience=10, mode="max"))
+    elif isinstance(early_stopping, dict):
+        callbacks.append(
+            pl_callbacks.EarlyStopping("val_f1_wo", patience=early_stopping.get("patience", 10), mode="max")
+        )
+    else:
+        raise ValueError("`early_stopping` must be bool type or dict type.")
 
     tb_logger = pl_loggers.TensorBoardLogger(
         save_dir=os.path.join(ROOT_DIR, "tb_logs"),

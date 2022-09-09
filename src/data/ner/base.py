@@ -8,6 +8,8 @@ T = TypeVar("T")
 class DatasetForNER(DatasetBase):
     NER_TAG_2_IDX = dict()
     NER_IDX_2_TAG = dict()
+    CLASSES_NUM = None
+    IGNORED_CLASS_INDEX = None
 
     def __init__(self):
         super(DatasetForNER, self).__init__()

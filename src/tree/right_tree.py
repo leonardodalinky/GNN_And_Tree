@@ -4,12 +4,12 @@ from torch_geometric.data import Data, Batch
 from .base import TreeBase
 
 
-class LeftTree(TreeBase):
-    TREE_NAME = "left"
+class RightTree(TreeBase):
+    TREE_NAME = "right"
     EMBEDDING_SIZE = 768
 
     def __init__(self):
-        super(LeftTree, self).__init__()
+        super(RightTree, self).__init__()
 
     def forward_re(self, *args):
         """
@@ -36,8 +36,8 @@ class LeftTree(TreeBase):
         for b in range(B):
             actual_len = actual_lens[b].item()
             edge = torch.zeros((2, actual_len - 1), dtype=torch.long, device=embeds.device)
-            edge[0] = torch.arange(1, actual_len, dtype=torch.long, device=embeds.device)
-            edge[1] = torch.arange(0, actual_len - 1, dtype=torch.long, device=embeds.device)
+            edge[0] = torch.arange(0, actual_len - 1, dtype=torch.long, device=embeds.device)
+            edge[1] = torch.arange(1, actual_len, dtype=torch.long, device=embeds.device)
             edges.append(edge)
         # construct batch
         data_list = list()

@@ -28,6 +28,8 @@ class CoNLL2003ForNER(DatasetForNER):
     HUGGINGFACE_DATASET_NAME = "conll2003"
     BERT_TOKENIZER_NAME = "bert-base-uncased"
     MAX_SEQ_LEN = 160
+    CLASSES_NUM = 19
+    IGNORED_CLASS_INDEX = 0
 
     def __init__(self, hf_data):
         super(CoNLL2003ForNER, self).__init__()
