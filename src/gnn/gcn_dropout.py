@@ -2,8 +2,12 @@ import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv
 
+from .base import GNNBase
 
-class GCN_Dropout(nn.Module):
+
+class GCN_Dropout(GNNBase):
+    GNN_NAME = "gcn_dropout"
+
     def __init__(self):
         super().__init__()
         self.gcn1 = GCNConv(768, 768)
@@ -16,4 +20,4 @@ class GCN_Dropout(nn.Module):
         x = self.gcn1(x, edge_index)
         x = self.dropout(x)
         x = self.gcn2(x, edge_index)
-        return x  # (batch_size, seq_len, hidden_size)
+        return x  # (batch_seq_len, hidden_size)

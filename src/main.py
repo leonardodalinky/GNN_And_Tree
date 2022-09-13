@@ -12,7 +12,7 @@ from framework import get_framework_class
 from datamodule import DataModule
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
-logging.basicConfig(level=LOGLEVEL)
+logging.basicConfig(level=logging.INFO)
 
 SRC_DIR = os.path.realpath(f"{__file__}/..")
 ROOT_DIR = os.path.realpath(f"{SRC_DIR}/..")

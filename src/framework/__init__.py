@@ -1,9 +1,11 @@
 from typing import Type, Optional
 
 from .base import ModelBase
+from .re_pos import RePos
 from .re_normal import ReNormal
 from .ner_normal import NerNormal
 from .re_normal_v2 import ReNormal_v2
+from .ner_normal_v2 import NerNormal_v2
 
 REGISTERED_FRAMEWORK_CLASSES = dict()
 
@@ -23,4 +25,6 @@ def get_framework_class(name: str) -> Type[ModelBase]:
 
 register_framework_class(ReNormal)
 register_framework_class(ReNormal_v2)
+register_framework_class(RePos)
 register_framework_class(NerNormal)
+register_framework_class(NerNormal_v2)

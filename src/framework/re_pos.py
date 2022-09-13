@@ -7,24 +7,24 @@ import torchmetrics as tm
 from torch_geometric.data import Batch
 
 from gnn import get_gnn_class
-from data import DatasetForNER
+from data import DatasetForRE
 from tree import get_tree_class
 
 from .base import ModelBase
 
 
-class NerNormal(ModelBase):
-    FRAMEWORK_NAME = "ner_normal"
-    TASK_TYPE = "ner"
+class RePos(ModelBase):
+    FRAMEWORK_NAME = "re_pos"
+    TASK_TYPE = "re"
 
     def __init__(self, config):
-        super(NerNormal, self).__init__(config)
+        super().__init__(config)
         assert config["task"]["type"] == self.TASK_TYPE
         assert config["model"]["framework"] == self.FRAMEWORK_NAME
         self.config = config
 
         # hyperparameters
-        self.dataset_cls = DatasetForNER.load_cls(config["task"]["dataset"]["name"])
+        self.dataset_cls = DatasetForRE.load_cls(config["task"]["dataset"]["name"])
         self.classes_num = self.dataset_cls.CLASSES_NUM
         config_train = config["task"].get("train", {})
         self.lr = config_train.get("lr", 1.0e-4)
@@ -34,7 +34,11 @@ class NerNormal(ModelBase):
         self.tree = get_tree_class(config["model"]["tree"])()
         self.gnn = get_gnn_class(config["model"]["gnn"])()
         self.criterion = nn.CrossEntropyLoss()
-        self.classifier = nn.Linear(self.tree.EMBEDDING_SIZE, self.classes_num)
+        self.classifier = nn.Sequential(
+            nn.Linear(2 * self.tree.EMBEDDING_SIZE, 2 * self.tree.EMBEDDING_SIZE // 4),
+            nn.SiLU(),
+            nn.Linear(2 * self.tree.EMBEDDING_SIZE // 4, self.classes_num),
+        )
 
         # metrics
 
@@ -51,76 +55,71 @@ class NerNormal(ModelBase):
         self.save_hyperparameters()
 
     def forward(self, data_dict: Dict[str, torch.Tensor]):
-        # x: (batch_size, seq_len)
+        e1_pos = data_dict["e1_pos"]
+        e2_pos = data_dict["e2_pos"]
         batch: Batch
         embeds, edges, batch = self.tree(
             data_dict, task_type=self.TASK_TYPE
         )  # embeds: (batch_size, seq_len, hidden_size), edges: list(2, edges_num), Batch
 
+        if torch.isnan(batch.x).sum().item() != 0:
+            print("batch.x is nan")
+            sys.exit(1)
+
         x = self.gnn(batch.x, batch.edge_index)  # x: (batch_seq_len, hidden_size)
-        x = torch.reshape(x, embeds.shape)  # x: (batch_size, seq_len, hidden_size)
-        x = self.classifier(x)  # x: (batch_size, seq_len, class_num)
-        return x
+        if torch.isnan(x).sum().item() != 0:
+            print("gnn x is nan")
+            sys.exit(1)
+        x = torch.reshape(x, embeds.shape)  # x: (batch, seq_len, hidden_size)
+        cat_pos_tensors = []
+        for xx, e1, e2 in zip(x, e1_pos, e2_pos):
+            # xx: (seq_len, hidden_size)
+            cat_pos_tensors.append(torch.cat([xx[e1], xx[e2]], dim=0))
+        cat_pos_tensors = torch.stack(cat_pos_tensors, dim=0)  # (batch, 2 * hidden_size)
+        ret = self.classifier(cat_pos_tensors)  # (batch, class_num)
+        if torch.isnan(ret).sum().item() != 0:
+            print("ret is nan")
+            sys.exit(1)
+        return ret
 
     def training_step(self, batch, batch_idx):
-        labels = batch["ner_tags"]  # labels: (batch_size, seq_len)
-        actual_lens = batch["actual_lens"]  # actual_lens: (batch_size)
-        y_hat = self.forward(batch)  # y_hat: (batch_size, seq_len, class_num)
-        all_loss = torch.zeros(y_hat.shape[0], dtype=torch.float)
-
-        for i, length in enumerate(actual_lens):
-            loss = self.criterion(y_hat[i, :length], labels[i, :length])
-            if torch.isnan(loss).sum().item() != 0:
-                print("length:")
-                print(length)
-                print("y_hat:")
-                print(y_hat[i, :length])
-                print("labels:")
-                print(labels[i, :length])
-                sys.exit(1)
-            all_loss[i] = self.criterion(y_hat[i, :length], labels[i, :length])
-
-        loss = torch.mean(all_loss)
+        labels = batch["labels"]
+        y_hat = self.forward(batch)
+        loss = self.criterion(y_hat, labels)
+        if torch.isnan(loss).sum().item() != 0:
+            print("loss is nan")
+            sys.exit(1)
 
         # metrics
         self.log("train_loss", loss, on_epoch=True, sync_dist=True)
 
-        for i, length in enumerate(actual_lens):
-            y_h = y_hat[i, :length]
-            y = labels[i, :length]
-            self.train_acc_w.update(y_h, y)
-            self.train_f1_w(y_h, y)
-
-            if self.dataset_cls.IGNORED_CLASS_INDEX is not None:
-                self.train_acc_wo(y_h, y)
-                self.train_f1_wo(y_h, y)
-
+        self.train_acc_w(y_hat, labels)
         self.log("train_acc_w", self.train_acc_w, on_epoch=True)
+        self.train_f1_w(y_hat, labels)
         self.log("train_f1_w", self.train_f1_w, on_epoch=True)
-        self.log("train_acc_wo", self.train_acc_wo, on_epoch=True)
-        self.log("train_f1_wo", self.train_f1_wo, on_epoch=True)
+
+        if self.dataset_cls.IGNORED_CLASS_INDEX is not None:
+            self.train_acc_wo(y_hat, labels)
+            self.log("train_acc_wo", self.train_acc_wo, on_epoch=True)
+            self.train_f1_wo(y_hat, labels)
+            self.log("train_f1_wo", self.train_f1_wo, on_epoch=True)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
-        labels = batch["ner_tags"]  # labels: (batch_size, seq_len)
-        actual_lens = batch["actual_lens"]  # actual_lens: (batch_size)
-        y_hat = self.forward(batch)  # y_hat: (batch_size, seq_len, class_num)
+        labels = batch["labels"]
+        y_hat = self.forward(batch)
 
-        for i, length in enumerate(actual_lens):
-            y_h = y_hat[i, :length]
-            y = labels[i, :length]
-            self.val_acc_w.update(y_h, y)
-            self.val_f1_w(y_h, y)
-
-            if self.dataset_cls.IGNORED_CLASS_INDEX is not None:
-                self.val_acc_wo(y_h, y)
-                self.val_f1_wo(y_h, y)
-
+        self.val_acc_w(y_hat, labels)
         self.log("val_acc_w", self.val_acc_w, on_epoch=True)
+        self.val_f1_w(y_hat, labels)
         self.log("val_f1_w", self.val_f1_w, on_epoch=True)
-        self.log("val_acc_wo", self.val_acc_wo, on_epoch=True)
-        self.log("val_f1_wo", self.val_f1_wo, on_epoch=True)
+
+        if self.dataset_cls.IGNORED_CLASS_INDEX is not None:
+            self.val_acc_wo(y_hat, labels)
+            self.log("val_acc_wo", self.val_acc_wo, on_epoch=True)
+            self.val_f1_wo(y_hat, labels)
+            self.log("val_f1_wo", self.val_f1_wo, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         # TODO

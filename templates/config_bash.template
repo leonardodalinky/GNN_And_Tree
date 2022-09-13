@@ -2,7 +2,9 @@
 
 cd "$(dirname $0)"
 
-export CUDA_VISIBLE_DEVICES=1
+if [ -z "$CUDA_VISIBLE_DEVICES" ]; then
+    export CUDA_VISIBLE_DEVICES="1"
+fi
 
 export PROJECT_VERSION="${tree_name}-${gnn_name}-${framework_name}-${timestamp}"
 export PROJECT_NAME="${project_name}"

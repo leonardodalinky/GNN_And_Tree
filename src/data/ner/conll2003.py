@@ -3,7 +3,6 @@ from typing import Dict, TypeVar
 import torch
 from datasets import load_dataset
 from transformers import BertTokenizer
-from torch.utils.data import TensorDataset
 
 from utils.data import DictTensorDataset
 
@@ -28,7 +27,7 @@ class CoNLL2003ForNER(DatasetForNER):
     HUGGINGFACE_DATASET_NAME = "conll2003"
     BERT_TOKENIZER_NAME = "bert-base-uncased"
     MAX_SEQ_LEN = 160
-    CLASSES_NUM = 19
+    CLASSES_NUM = len(NER_TAG_2_IDX)
     IGNORED_CLASS_INDEX = 0
 
     def __init__(self, hf_data):
@@ -57,7 +56,7 @@ class CoNLL2003ForNER(DatasetForNER):
             "test": cls(ds_dict["test"]),
         }
 
-    def _transform_dataset(self, hf_data) -> TensorDataset:
+    def _transform_dataset(self, hf_data) -> DictTensorDataset:
         cls = self.__class__
         input_ids = []
         attention_masks = []

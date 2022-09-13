@@ -1,3 +1,5 @@
+import sys
+
 import torch
 from torch_geometric.data import Data, Batch
 
@@ -31,6 +33,10 @@ class LeftTree(TreeBase):
         )
         edges = list()
         embeds = output_dict["last_hidden_state"]  # (batch_size, seq_len, hidden_size)
+        if torch.isnan(embeds).sum().item() != 0:
+            print("embeds is nan")
+            print(torch.nonzero(torch.isnan(embeds)))
+            sys.exit(1)
         # build left tree edges
         B, _, _ = embeds.shape
         for b in range(B):

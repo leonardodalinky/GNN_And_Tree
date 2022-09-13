@@ -8,8 +8,8 @@ killall() {
     # kill -TERM 0
     kill -TERM -$(ps -o pgid=$$ | grep -o '[0-9]*')
     wait
-    echo "DONE"
-    im-remind qq "Task($PROJECT_NAME-$PROJECT_VERSION) is killed."
+    # im-remind qq "Task($PROJECT_NAME-$PROJECT_VERSION) is killed."
+    exit
 }
 
 get_unused_port() {

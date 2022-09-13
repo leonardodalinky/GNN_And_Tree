@@ -68,9 +68,9 @@ class SemEvalForRE(DatasetForRE):
                 # Find e1(id:2487) and e2(id:2475) position
                 pos1 = (ids == 2487).nonzero()[0][1].item()
                 pos2 = (ids == 2475).nonzero()[0][1].item()
-                if pos1 > self.MAX_SEQ_LEN:
+                if pos1 >= self.MAX_SEQ_LEN:
                     pos1 = -1
-                if pos2 > self.MAX_SEQ_LEN:
+                if pos2 >= self.MAX_SEQ_LEN:
                     pos2 = -1
                 # truncate manually
                 if ids.shape[1] > self.MAX_SEQ_LEN:
